@@ -84,6 +84,17 @@ RSS_FEEDS = {
         {'url': 'https://www.moneycontrol.com/rss/latestnews.xml', 'source': 'Moneycontrol', 'location': 'India'},
         {'url': 'https://finance.yahoo.com/news/rssindex', 'source': 'Yahoo Finance', 'location': None},
     ],
+    'Cyber & Tech': [
+        {'url': 'https://www.wired.com/feed/category/security/latest/rss', 'source': 'Wired Security', 'location': None},
+        {'url': 'https://krebsonsecurity.com/feed/', 'source': 'Krebs on Security', 'location': None},
+        {'url': 'https://www.bleepingcomputer.com/feed/', 'source': 'BleepingComputer', 'location': None},
+        {'url': 'https://thehackernews.com/feeds/posts/default', 'source': 'The Hacker News', 'location': None},
+        {'url': 'https://www.darkreading.com/rss.xml', 'source': 'Dark Reading', 'location': None},
+        {'url': 'https://www.theregister.com/security/headlines.atom', 'source': 'The Register', 'location': None},
+        {'url': 'https://techcrunch.com/category/security/feed/', 'source': 'TechCrunch Security', 'location': None},
+        {'url': 'https://www.schneier.com/feed/', 'source': 'Schneier on Security', 'location': None},
+        {'url': 'https://semianalysis.com/feed/', 'source': 'SemiAnalysis', 'location': None},
+    ],
 }
 
 # ============================================================================

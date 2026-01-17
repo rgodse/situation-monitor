@@ -153,12 +153,14 @@
             position: absolute;
             bottom: 1rem;
             left: 1rem;
-            background: rgba(15, 15, 25, 0.9);
+            right: auto;
+            background: rgba(15, 15, 25, 0.95);
             border: 1px solid rgba(255, 100, 100, 0.3);
             border-radius: 8px;
             padding: 1rem;
-            z-index: 10;
+            z-index: 11;
             backdrop-filter: blur(10px);
+            max-width: 220px;
         }
 
         .legend-title {
@@ -168,6 +170,14 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             margin-bottom: 0.5rem;
+        }
+
+        .legend-section {
+            margin-bottom: 0.75rem;
+        }
+
+        .legend-section:last-child {
+            margin-bottom: 0;
         }
 
         .legend-items {
@@ -180,7 +190,7 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: #aaa;
         }
 
@@ -193,6 +203,30 @@
         .legend-dot.high { background: #ff4444; }
         .legend-dot.medium { background: #ffaa00; }
         .legend-dot.low { background: #44ff88; }
+        .legend-dot.conflict {
+            background: #ff0000;
+            box-shadow: 0 0 10px #ff0000;
+            animation: conflict-pulse 1s infinite;
+        }
+        .legend-line {
+            width: 20px;
+            height: 2px;
+            border-radius: 2px;
+        }
+        .legend-line.shipping {
+            background: #4488ff;
+        }
+        .legend-line.air {
+            background: rgba(68, 216, 255, 0.6);
+        }
+        .legend-line.satellite {
+            background: rgba(170, 255, 255, 0.6);
+        }
+
+        @keyframes conflict-pulse {
+            0%, 100% { box-shadow: 0 0 5px #ff0000; }
+            50% { box-shadow: 0 0 15px #ff0000; }
+        }
 
         .globe-controls {
             position: absolute;
@@ -200,7 +234,8 @@
             right: 1rem;
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 0.35rem;
+            align-items: flex-end;
             z-index: 10;
         }
 
@@ -211,9 +246,11 @@
             padding: 0.75rem;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 1.25rem;
+            font-size: 1.1rem;
             transition: all 0.2s;
             backdrop-filter: blur(10px);
+            min-width: 45px;
+            text-align: center;
         }
 
         .globe-btn:hover {
@@ -221,9 +258,95 @@
             border-color: #ff4444;
         }
 
+        .globe-btn.active {
+            background: rgba(255, 68, 68, 0.4);
+            border-color: #ff4444;
+        }
+
+        .globe-btn small {
+            display: block;
+            font-size: 0.6rem;
+            margin-top: 2px;
+            opacity: 0.7;
+        }
+
         .default-panel {
             color: #666;
             font-size: 0.85rem;
+        }
+
+        /* Time-lapse controls */
+        .timelapse-controls {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(15, 15, 25, 0.9);
+            border: 1px solid rgba(255, 100, 100, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+            display: none;
+        }
+
+        .timelapse-controls.show {
+            display: block;
+        }
+
+        .timelapse-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: #ff4444;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.75rem;
+        }
+
+        .timelapse-time {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+
+        .timelapse-date {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 1rem;
+        }
+
+        .timelapse-progress {
+            width: 200px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 0.75rem;
+        }
+
+        .timelapse-progress-bar {
+            height: 100%;
+            background: #ff4444;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .timelapse-btn {
+            background: rgba(255, 68, 68, 0.2);
+            border: 1px solid #ff4444;
+            color: #ff4444;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            margin-right: 0.5rem;
+        }
+
+        .timelapse-btn:hover {
+            background: #ff4444;
+            color: #000;
         }
 
         @keyframes pulse-glow {
@@ -258,29 +381,91 @@
                 </div>
             </div>
 
+            <!-- Time-lapse Panel -->
+            <div class="timelapse-controls" id="timelapse-panel">
+                <div class="timelapse-title">Time-Lapse Mode</div>
+                <div class="timelapse-time" id="timelapse-time">00:00</div>
+                <div class="timelapse-date" id="timelapse-date">-</div>
+                <div class="timelapse-progress">
+                    <div class="timelapse-progress-bar" id="timelapse-progress"></div>
+                </div>
+                <button class="timelapse-btn" onclick="playTimelapse()">▶ Play</button>
+                <button class="timelapse-btn" onclick="stopTimelapse()">⏹ Stop</button>
+            </div>
+
             <!-- Legend -->
             <div class="globe-legend">
-                <div class="legend-title">Activity Level</div>
-                <div class="legend-items">
-                    <div class="legend-item">
-                        <span class="legend-dot high"></span>
-                        <span>High (20+ articles)</span>
+                <div class="legend-section">
+                    <div class="legend-title">News Activity</div>
+                    <div class="legend-items">
+                        <div class="legend-item">
+                            <span class="legend-dot high"></span>
+                            <span>High (20+ articles)</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot medium"></span>
+                            <span>Medium (5-19)</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot low"></span>
+                            <span>Low (1-4)</span>
+                        </div>
                     </div>
-                    <div class="legend-item">
-                        <span class="legend-dot medium"></span>
-                        <span>Medium (5-19 articles)</span>
+                </div>
+                <div class="legend-section">
+                    <div class="legend-title">Overlays</div>
+                    <div class="legend-items">
+                        <div class="legend-item">
+                            <span class="legend-dot conflict"></span>
+                            <span>Active Conflict</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-line shipping"></span>
+                            <span>Shipping Lane</span>
+                        </div>
                     </div>
-                    <div class="legend-item">
-                        <span class="legend-dot low"></span>
-                        <span>Low (1-4 articles)</span>
+                </div>
+                <div class="legend-section">
+                    <div class="legend-title">Air & Space</div>
+                    <div class="legend-items">
+                        <div class="legend-item">
+                            <span class="legend-line air"></span>
+                            <span>Air corridors</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-line satellite"></span>
+                            <span>Satellite sweeps</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Controls -->
             <div class="globe-controls">
-                <button class="globe-btn" onclick="toggleAutoRotate()" title="Toggle rotation">🔄</button>
-                <button class="globe-btn" onclick="resetView()" title="Reset view">🏠</button>
+                <button class="globe-btn" onclick="toggleAutoRotate()" title="Toggle rotation">
+                    🔄<small>Spin</small>
+                </button>
+                <button class="globe-btn" onclick="toggleConflicts()" id="conflict-btn" title="Toggle conflict zones">
+                    💥<small>Wars</small>
+                </button>
+                <button class="globe-btn" onclick="toggleShipping()" id="shipping-btn" title="Toggle shipping lanes">
+                    🚢<small>Trade</small>
+                </button>
+                <button class="globe-btn" onclick="toggleTimelapse()" id="timelapse-btn" title="Time-lapse mode">
+                    ⏱️<small>Time</small>
+                </button>
+                <button class="globe-btn active" onclick="toggleNews()" id="news-btn" title="Toggle news markers">
+                    📰<small>News</small>
+                </button>
+                <button class="globe-btn active" onclick="toggleAirRoutes()" id="air-btn" title="Toggle air corridors">
+                    ✈️<small>Air</small>
+                </button>
+                <button class="globe-btn active" onclick="toggleSatellites()" id="sat-btn" title="Toggle satellite sweeps">
+                    🛰️<small>Sat</small>
+                </button>
+                <button class="globe-btn" onclick="resetView()" title="Reset view">
+                    🏠<small>Reset</small>
+                </button>
             </div>
         </div>
     </div>
@@ -289,19 +474,78 @@
         let globe;
         let globeData = [];
         let autoRotate = true;
+        let showConflicts = true;
+        let showShipping = true;
+        let showAirRoutes = true;
+        let showSatellites = true;
+        let timelapseActive = false;
+        let timelapseInterval = null;
+        let showNews = true;
+        let visiblePoints = [];
+
+        // Active conflict zones with pulsing rings
+        const CONFLICT_ZONES = [
+            { name: 'Ukraine', lat: 48.5, lng: 35.0, intensity: 'high' },
+            { name: 'Gaza', lat: 31.4, lng: 34.4, intensity: 'high' },
+            { name: 'Sudan', lat: 15.5, lng: 32.5, intensity: 'high' },
+            { name: 'Myanmar', lat: 21.0, lng: 96.0, intensity: 'medium' },
+            { name: 'Syria', lat: 35.0, lng: 38.0, intensity: 'medium' },
+            { name: 'Yemen', lat: 15.5, lng: 47.5, intensity: 'medium' },
+            { name: 'Ethiopia', lat: 9.0, lng: 40.0, intensity: 'low' },
+            { name: 'Haiti', lat: 19.0, lng: -72.3, intensity: 'medium' },
+            { name: 'DRC', lat: -2.5, lng: 28.5, intensity: 'medium' },
+        ];
+
+        // Major shipping lanes
+        const SHIPPING_LANES = [
+            // Strait of Malacca
+            { start: [1.2, 103.8], end: [6.0, 95.0], name: 'Strait of Malacca' },
+            // Suez Canal route
+            { start: [30.0, 32.5], end: [12.5, 43.5], name: 'Suez-Red Sea' },
+            { start: [12.5, 43.5], end: [14.0, 50.0], name: 'Gulf of Aden' },
+            // Strait of Hormuz
+            { start: [26.5, 56.5], end: [24.0, 58.0], name: 'Strait of Hormuz' },
+            { start: [24.0, 58.0], end: [20.0, 64.0], name: 'Arabian Sea Route' },
+            // South China Sea
+            { start: [22.3, 114.2], end: [10.0, 107.0], name: 'South China Sea N' },
+            { start: [10.0, 107.0], end: [1.2, 103.8], name: 'South China Sea S' },
+            // Panama approach
+            { start: [9.0, -79.5], end: [25.0, -80.0], name: 'Panama-US' },
+            { start: [9.0, -79.5], end: [-5.0, -81.0], name: 'Panama-Pacific' },
+            // Atlantic routes
+            { start: [40.7, -74.0], end: [51.5, -0.1], name: 'North Atlantic' },
+            { start: [51.5, -0.1], end: [30.0, 32.5], name: 'Europe-Suez' },
+            // Cape route (alternative to Suez)
+            { start: [-34.0, 18.5], end: [14.0, 50.0], name: 'Cape Route' },
+            // Taiwan Strait
+            { start: [25.0, 121.5], end: [22.3, 114.2], name: 'Taiwan Strait' },
+            // Bering Strait
+            { start: [66.0, -169.0], end: [55.0, -160.0], name: 'Bering Strait' },
+        ];
+
+        const AIR_ROUTES = [
+            { start: [40.7128, -74.0060], end: [51.5074, -0.1278], name: 'NYC ↔ London' },
+            { start: [34.0522, -118.2437], end: [35.6762, 139.6503], name: 'LA ↔ Tokyo' },
+            { start: [25.2048, 55.2708], end: [48.8566, 2.3522], name: 'Dubai ↔ Paris' },
+            { start: [-23.5505, -46.6333], end: [51.5074, -0.1278], name: 'São Paulo ↔ London' },
+            { start: [1.3521, 103.8198], end: [37.7749, -122.4194], name: 'Singapore ↔ San Francisco' },
+        ];
+
+        const SATELLITE_PATHS = [
+            { start: [80.0, -20.0], end: [-80.0, 160.0], name: 'Polar Orbit Alpha' },
+            { start: [80.0, 120.0], end: [-80.0, -60.0], name: 'Polar Orbit Beta' },
+            { start: [10.0, -140.0], end: [10.0, 140.0], name: 'Equatorial Sweep' },
+        ];
 
         // Initialize globe
         async function initGlobe() {
-            // Fetch data
             const response = await fetch('/api/globe-data');
             globeData = await response.json();
 
-            // Create globe
             globe = Globe()
                 .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-dark.jpg')
                 .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
                 .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
-                .pointsData(globeData)
                 .pointLat(d => d.lat)
                 .pointLng(d => d.lng)
                 .pointColor(d => getPointColor(d.count))
@@ -313,22 +557,140 @@
                 .atmosphereAltitude(0.15)
                 (document.getElementById('globe'));
 
-            // Set initial view
             globe.pointOfView({ lat: 30, lng: 0, altitude: 2.5 });
-
-            // Auto-rotate
             globe.controls().autoRotate = true;
             globe.controls().autoRotateSpeed = 0.5;
 
-            // Add arcs for connections between high-activity locations
-            addArcs();
+            // Add overlays
+            addConflictZones();
+            updateArcLayers();
+            visiblePoints = globeData;
+            updateNewsPoints();
         }
 
         // Get color based on article count
         function getPointColor(count) {
-            if (count >= 20) return '#ff4444';  // Red - high activity
-            if (count >= 5) return '#ffaa00';   // Orange - medium
-            return '#44ff88';                    // Green - low
+            if (count >= 20) return '#ff4444';
+            if (count >= 5) return '#ffaa00';
+            return '#44ff88';
+        }
+
+        function updateNewsPoints() {
+            if (!globe) return;
+            const data = showNews ? visiblePoints : [];
+            globe.pointsData(data);
+        }
+
+        // Add conflict zone rings
+        function addConflictZones() {
+            const rings = CONFLICT_ZONES.map(zone => ({
+                lat: zone.lat,
+                lng: zone.lng,
+                maxR: zone.intensity === 'high' ? 8 : zone.intensity === 'medium' ? 5 : 3,
+                propagationSpeed: zone.intensity === 'high' ? 3 : 2,
+                repeatPeriod: zone.intensity === 'high' ? 800 : 1200,
+                color: zone.intensity === 'high' ? '#ff0000' : zone.intensity === 'medium' ? '#ff4400' : '#ff6600',
+                name: zone.name
+            }));
+
+            globe
+                .ringsData(showConflicts ? rings : [])
+                .ringColor(d => d.color)
+                .ringMaxRadius(d => d.maxR)
+                .ringPropagationSpeed(d => d.propagationSpeed)
+                .ringRepeatPeriod(d => d.repeatPeriod);
+        }
+
+        function updateArcLayers() {
+            if (!globe) return;
+            const arcs = [];
+
+            if (showShipping) {
+                arcs.push(...SHIPPING_LANES.map(lane => ({
+                    startLat: lane.start[0],
+                    startLng: lane.start[1],
+                    endLat: lane.end[0],
+                    endLng: lane.end[1],
+                    name: lane.name,
+                    type: 'shipping',
+                    altitude: 0.12
+                })));
+            }
+
+            if (showAirRoutes) {
+                arcs.push(...AIR_ROUTES.map(route => ({
+                    startLat: route.start[0],
+                    startLng: route.start[1],
+                    endLat: route.end[0],
+                    endLng: route.end[1],
+                    name: route.name,
+                    type: 'air',
+                    altitude: 0.25
+                })));
+            }
+
+            if (showSatellites) {
+                arcs.push(...SATELLITE_PATHS.map(path => ({
+                    startLat: path.start[0],
+                    startLng: path.start[1],
+                    endLat: path.end[0],
+                    endLng: path.end[1],
+                    name: path.name,
+                    type: 'satellite',
+                    altitude: 0.35
+                })));
+            }
+
+            if (arcs.length === 0) {
+                globe.arcsData([]);
+                return;
+            }
+
+            globe
+                .arcsData(arcs)
+                .arcColor(d => d.type === 'satellite'
+                    ? 'rgba(170, 255, 255, 0.7)'
+                    : d.type === 'air'
+                        ? 'rgba(68, 216, 255, 0.6)'
+                        : 'rgba(68, 136, 255, 0.6)')
+                .arcDashLength(d => d.type === 'satellite' ? 0.6 : 0.4)
+                .arcDashGap(0.2)
+                .arcDashAnimateTime(d => d.type === 'satellite' ? 4000 : 3000)
+                .arcStroke(d => d.type === 'satellite' ? 0.7 : d.type === 'air' ? 0.6 : 0.5)
+                .arcAltitude(d => d.altitude)
+                .arcLabel(d => d.name);
+        }
+
+        function toggleNews() {
+            showNews = !showNews;
+            document.getElementById('news-btn').classList.toggle('active', showNews);
+            updateNewsPoints();
+        }
+
+        function toggleAirRoutes() {
+            showAirRoutes = !showAirRoutes;
+            document.getElementById('air-btn').classList.toggle('active', showAirRoutes);
+            updateArcLayers();
+        }
+
+        function toggleSatellites() {
+            showSatellites = !showSatellites;
+            document.getElementById('sat-btn').classList.toggle('active', showSatellites);
+            updateArcLayers();
+        }
+
+        // Toggle conflict zones
+        function toggleConflicts() {
+            showConflicts = !showConflicts;
+            document.getElementById('conflict-btn').classList.toggle('active', showConflicts);
+            addConflictZones();
+        }
+
+        // Toggle shipping lanes
+        function toggleShipping() {
+            showShipping = !showShipping;
+            document.getElementById('shipping-btn').classList.toggle('active', showShipping);
+            updateArcLayers();
         }
 
         // Handle point click
@@ -350,40 +712,11 @@
                 <div class="category-tags">${categoriesHtml}</div>
             `;
 
-            // Focus on location
             globe.pointOfView({
                 lat: point.lat,
                 lng: point.lng,
                 altitude: 1.5
             }, 1000);
-        }
-
-        // Add arcs between major hotspots
-        function addArcs() {
-            const hotspots = globeData
-                .filter(d => d.count >= 10)
-                .sort((a, b) => b.count - a.count)
-                .slice(0, 10);
-
-            const arcs = [];
-            for (let i = 0; i < hotspots.length - 1; i++) {
-                for (let j = i + 1; j < hotspots.length; j++) {
-                    arcs.push({
-                        startLat: hotspots[i].lat,
-                        startLng: hotspots[i].lng,
-                        endLat: hotspots[j].lat,
-                        endLng: hotspots[j].lng,
-                    });
-                }
-            }
-
-            globe
-                .arcsData(arcs)
-                .arcColor(() => ['rgba(255, 68, 68, 0.3)', 'rgba(255, 68, 68, 0.3)'])
-                .arcDashLength(0.5)
-                .arcDashGap(0.2)
-                .arcDashAnimateTime(2000)
-                .arcStroke(0.3);
         }
 
         // Toggle auto-rotate
@@ -399,8 +732,74 @@
                 '<p class="default-panel">Click a marker to view articles from that location</p>';
         }
 
-        // Initialize on load
+        // Time-lapse functions
+        function toggleTimelapse() {
+            const panel = document.getElementById('timelapse-panel');
+            const btn = document.getElementById('timelapse-btn');
+            timelapseActive = !timelapseActive;
+
+            panel.classList.toggle('show', timelapseActive);
+            btn.classList.toggle('active', timelapseActive);
+
+            if (!timelapseActive) {
+                stopTimelapse();
+                // Restore all points
+                visiblePoints = globeData;
+                updateNewsPoints();
+            }
+        }
+
+        function playTimelapse() {
+            if (timelapseInterval) return;
+
+            let progress = 0;
+            const duration = 24; // 24 hours
+            const stepMs = 100; // Update every 100ms
+            const steps = 240; // Total steps
+
+            visiblePoints = [];
+            updateNewsPoints();
+
+            timelapseInterval = setInterval(() => {
+                progress++;
+                const percentage = (progress / steps) * 100;
+                const hours = Math.floor((progress / steps) * duration);
+                const mins = Math.floor(((progress / steps) * duration * 60) % 60);
+
+                document.getElementById('timelapse-progress').style.width = percentage + '%';
+                document.getElementById('timelapse-time').textContent =
+                    `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+                document.getElementById('timelapse-date').textContent = 'Last 24 hours';
+
+                // Progressively add points based on "time"
+                visiblePoints = globeData.slice(0, Math.floor((progress / steps) * globeData.length));
+                updateNewsPoints();
+
+                if (progress >= steps) {
+                    stopTimelapse();
+                }
+            }, stepMs);
+        }
+
+        function stopTimelapse() {
+            if (timelapseInterval) {
+                clearInterval(timelapseInterval);
+                timelapseInterval = null;
+            }
+            document.getElementById('timelapse-progress').style.width = '100%';
+            visiblePoints = globeData;
+            updateNewsPoints();
+        }
+
+        // Initialize
         initGlobe();
+
+        // Set initial button states
+        document.getElementById('conflict-btn').classList.add('active');
+        document.getElementById('shipping-btn').classList.add('active');
+        document.getElementById('news-btn').classList.add('active');
+        document.getElementById('air-btn').classList.add('active');
+        document.getElementById('sat-btn').classList.add('active');
     </script>
 </body>
 </html>
