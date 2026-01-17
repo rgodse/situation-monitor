@@ -1,0 +1,5 @@
+flask>=2.3.0
+feedparser>=6.0.0
+apscheduler>=3.10.0
+requests>=2.31.0
+gunicorn>=21.0.0

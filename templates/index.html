@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Situation Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #mini-map {
+            height: 250px;
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 100, 100, 0.3);
+        }
+        .map-container { position: relative; }
+        .map-overlay {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(10, 10, 15, 0.8);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            color: #888;
+            z-index: 1000;
+        }
+        .leaflet-popup-content-wrapper { background: #1a1a28; color: #fff; border-radius: 6px; }
+        .leaflet-popup-tip { background: #1a1a28; }
+        .leaflet-popup-content { margin: 10px; }
+        .popup-title { font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; }
+        .popup-count { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #ff4444; }
+        .leaflet-container { background: #0a0a0f; }
+
+        /* Breaking News Banner */
+        .breaking-banner {
+            background: linear-gradient(90deg, #1a0a0a, #2a0a0a, #1a0a0a);
+            border-bottom: 1px solid #ff4444;
+            padding: 0.5rem 1rem;
+            overflow: hidden;
+            position: relative;
+        }
+        .breaking-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #ff4444;
+            color: #000;
+            padding: 0.25rem 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            border-radius: 3px;
+            margin-right: 1rem;
+            animation: pulse-bg 1.5s infinite;
+        }
+        @keyframes pulse-bg {
+            0%, 100% { background: #ff4444; }
+            50% { background: #ff6666; }
+        }
+        .breaking-ticker {
+            display: inline-block;
+            white-space: nowrap;
+            animation: ticker 30s linear infinite;
+        }
+        .breaking-ticker:hover { animation-play-state: paused; }
+        @keyframes ticker {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .breaking-item {
+            display: inline-block;
+            margin-right: 3rem;
+            color: #fff;
+            font-size: 0.85rem;
+        }
+        .breaking-item a {
+            color: #fff;
+            text-decoration: none;
+        }
+        .breaking-item a:hover { color: #ff4444; }
+        .breaking-item .source {
+            color: #ff6666;
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+        }
+        .breaking-hidden { display: none; }
+
+        /* Bookmarks */
+        .bookmark-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 0.25rem;
+            opacity: 0.5;
+            transition: all 0.2s;
+        }
+        .bookmark-btn:hover { opacity: 1; }
+        .bookmark-btn.bookmarked { opacity: 1; color: #ffaa00; }
+        .bookmarks-filter {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-left: 1rem;
+        }
+        .bookmarks-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .bookmarks-toggle:hover, .bookmarks-toggle.active {
+            background: rgba(255, 170, 0, 0.2);
+            border-color: #ffaa00;
+            color: #ffaa00;
+        }
+        .bookmark-count {
+            background: #ffaa00;
+            color: #000;
+            padding: 0.1rem 0.4rem;
+            border-radius: 10px;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+
+        /* Related articles (deduplication) */
+        .related-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            padding: 0.4rem 0.75rem;
+            background: rgba(68, 136, 255, 0.1);
+            border: 1px solid rgba(68, 136, 255, 0.3);
+            color: #4488ff;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .related-toggle:hover {
+            background: rgba(68, 136, 255, 0.2);
+        }
+        .related-articles {
+            display: none;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .related-articles.show { display: block; }
+        .related-article {
+            padding: 0.5rem 0;
+            font-size: 0.85rem;
+        }
+        .related-article a {
+            color: #aaa;
+            text-decoration: none;
+        }
+        .related-article a:hover { color: #fff; }
+        .related-source {
+            color: #666;
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+        }
+
+        /* Group view toggle */
+        .view-toggle {
+            display: flex;
+            gap: 0.25rem;
+            background: var(--bg-tertiary);
+            padding: 0.25rem;
+            border-radius: 6px;
+        }
+        .view-btn {
+            padding: 0.4rem 0.75rem;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .view-btn:hover { color: var(--text-primary); }
+        .view-btn.active {
+            background: var(--accent-red);
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Breaking News Banner -->
+        <div class="breaking-banner" id="breaking-banner">
+            <span class="breaking-label">
+                <span style="animation: pulse 1s infinite;">●</span> BREAKING
+            </span>
+            <div class="breaking-ticker" id="breaking-ticker">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <span class="logo-icon">◉</span>
+                    <span class="logo-text">SITUATION MONITOR</span>
+                </div>
+                <div class="status-indicator">
+                    <span class="pulse"></span>
+                    <span class="status-text">LIVE</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="stats" id="stats">
+                    <span class="stat"><span class="stat-value" id="stat-total">--</span> articles</span>
+                    <span class="stat"><span class="stat-value" id="stat-sources">--</span> sources</span>
+                    <span class="stat"><span class="stat-value" id="stat-locations">--</span> locations</span>
+                </div>
+                <nav class="nav-links">
+                    <a href="/" class="nav-link active">Dashboard</a>
+                    <a href="/globe" class="nav-link">3D Globe</a>
+                </nav>
+                <button class="refresh-btn" onclick="refreshFeeds()">
+                    <span class="refresh-icon">↻</span> Refresh
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">GLOBAL ACTIVITY</h3>
+                    <div class="map-container">
+                        <div id="mini-map"></div>
+                        <div class="map-overlay">Click markers for details</div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">QUICK FILTERS</h3>
+                    <div class="quick-filters">
+                        <button class="quick-filter" onclick="quickSearch('trump')">Trump</button>
+                        <button class="quick-filter" onclick="quickSearch('ukraine')">Ukraine</button>
+                        <button class="quick-filter" onclick="quickSearch('china')">China</button>
+                        <button class="quick-filter" onclick="quickSearch('israel')">Israel</button>
+                        <button class="quick-filter" onclick="quickSearch('india')">India</button>
+                        <button class="quick-filter" onclick="quickSearch('russia')">Russia</button>
+                        <button class="quick-filter" onclick="quickSearch('nato')">NATO</button>
+                        <button class="quick-filter" onclick="quickSearch('taiwan')">Taiwan</button>
+                        <button class="quick-filter" onclick="quickSearch('iran')">Iran</button>
+                        <button class="quick-filter" onclick="quickSearch('tariff')">Tariffs</button>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">OSINT FEED</h3>
+                    <div class="twitter-embed">
+                        <a class="twitter-timeline"
+                           data-height="350"
+                           data-theme="dark"
+                           data-chrome="noheader nofooter noborders transparent"
+                           href="https://twitter.com/mufcnotok/lists/2012584405005725899">
+                           Loading OSINT feed...
+                        </a>
+                        <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- News Feed -->
+            <div class="feed-container">
+                <!-- Controls -->
+                <div class="controls">
+                    <div class="search-box">
+                        <input type="text" id="search" placeholder="Search articles..." onkeyup="debounceSearch()">
+                        <span class="search-icon">⌕</span>
+                    </div>
+
+                    <div class="filter-group">
+                        <select id="source-filter" onchange="loadArticles()">
+                            <option value="">All Sources</option>
+                        </select>
+                    </div>
+
+                    <div class="view-toggle">
+                        <button class="view-btn active" onclick="setView('list', this)">List</button>
+                        <button class="view-btn" onclick="setView('grouped', this)">Grouped</button>
+                    </div>
+
+                    <div class="bookmarks-filter">
+                        <button class="bookmarks-toggle" id="bookmarks-toggle" onclick="toggleBookmarksView()">
+                            ★ Saved <span class="bookmark-count" id="bookmark-count">0</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Category Tabs -->
+                <div class="category-tabs">
+                    <button class="category-tab active" data-category="" onclick="setCategory(this, '')">
+                        ALL
+                    </button>
+                    {% for category in categories %}
+                    <button class="category-tab" data-category="{{ category }}" onclick="setCategory(this, '{{ category }}')">
+                        {{ category | upper }}
+                    </button>
+                    {% endfor %}
+                </div>
+
+                <!-- Articles -->
+                <div class="articles" id="articles">
+                    <div class="loading">Loading articles...</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        let currentCategory = '';
+        let searchTimeout = null;
+        let miniMap = null;
+        let markers = [];
+        let bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
+        let showBookmarksOnly = false;
+        let currentView = 'list';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadArticles();
+            loadSources();
+            loadStats();
+            loadBreakingNews();
+            initMiniMap();
+            updateBookmarkCount();
+        });
+
+        // Load breaking news
+        async function loadBreakingNews() {
+            try {
+                const response = await fetch('/api/breaking');
+                const articles = await response.json();
+
+                const banner = document.getElementById('breaking-banner');
+                const ticker = document.getElementById('breaking-ticker');
+
+                if (articles.length === 0) {
+                    banner.classList.add('breaking-hidden');
+                    return;
+                }
+
+                banner.classList.remove('breaking-hidden');
+
+                // Duplicate for seamless loop
+                const items = articles.map(a =>
+                    `<span class="breaking-item"><a href="${a.link}" target="_blank">${a.title}</a><span class="source">${a.source}</span></span>`
+                ).join('');
+
+                ticker.innerHTML = items + items;
+            } catch (error) {
+                console.error('Error loading breaking news:', error);
+                document.getElementById('breaking-banner').classList.add('breaking-hidden');
+            }
+        }
+
+        // Initialize mini-map
+        async function initMiniMap() {
+            miniMap = L.map('mini-map', {
+                zoomControl: false,
+                attributionControl: false
+            }).setView([25, 0], 1.5);
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19
+            }).addTo(miniMap);
+
+            try {
+                const response = await fetch('/api/globe-data');
+                const data = await response.json();
+
+                data.forEach(location => {
+                    const radius = Math.max(5, Math.min(location.count / 2, 20));
+                    let color = '#44ff88';
+                    if (location.count >= 20) color = '#ff4444';
+                    else if (location.count >= 5) color = '#ffaa00';
+
+                    const marker = L.circleMarker([location.lat, location.lng], {
+                        radius: radius,
+                        fillColor: color,
+                        color: color,
+                        weight: 1,
+                        opacity: 0.8,
+                        fillOpacity: 0.5
+                    }).addTo(miniMap);
+
+                    const titles = location.titles.slice(0, 3).map(t =>
+                        `<div style="font-size:0.75rem;color:#ccc;margin:2px 0;">• ${t.substring(0, 50)}${t.length > 50 ? '...' : ''}</div>`
+                    ).join('');
+
+                    marker.bindPopup(`
+                        <div class="popup-title">${location.name}</div>
+                        <div class="popup-count">${location.count} articles</div>
+                        ${titles}
+                    `);
+
+                    marker.on('click', () => quickSearch(location.name.toLowerCase()));
+                    markers.push(marker);
+                });
+            } catch (error) {
+                console.error('Error loading map data:', error);
+            }
+        }
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+                document.getElementById('stat-total').textContent = stats.total_articles.toLocaleString();
+                document.getElementById('stat-sources').textContent = stats.sources_count;
+                document.getElementById('stat-locations').textContent = stats.locations_count;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Load sources
+        async function loadSources() {
+            try {
+                const response = await fetch('/api/sources');
+                const sources = await response.json();
+                const select = document.getElementById('source-filter');
+                sources.forEach(source => {
+                    const option = document.createElement('option');
+                    option.value = source;
+                    option.textContent = source;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading sources:', error);
+            }
+        }
+
+        // Set view mode
+        function setView(view, btn) {
+            document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentView = view;
+            loadArticles();
+        }
+
+        // Load articles
+        async function loadArticles() {
+            const container = document.getElementById('articles');
+            container.innerHTML = '<div class="loading">Loading articles...</div>';
+
+            const params = new URLSearchParams();
+            if (currentCategory) params.append('category', currentCategory);
+
+            const search = document.getElementById('search').value;
+            if (search) params.append('search', search);
+
+            const source = document.getElementById('source-filter').value;
+            if (source) params.append('source', source);
+
+            try {
+                const endpoint = currentView === 'grouped' ? '/api/articles-grouped' : '/api/articles';
+                const response = await fetch(`${endpoint}?${params}`);
+                const data = await response.json();
+
+                if (data.length === 0) {
+                    container.innerHTML = '<div class="no-results">No articles found</div>';
+                    return;
+                }
+
+                if (currentView === 'grouped') {
+                    let articles = data;
+                    if (showBookmarksOnly) {
+                        articles = data.filter(g => bookmarks.includes(g.main.link));
+                    }
+                    container.innerHTML = articles.map(group => createGroupedCard(group)).join('');
+                } else {
+                    let articles = data;
+                    if (showBookmarksOnly) {
+                        articles = data.filter(a => bookmarks.includes(a.link));
+                    }
+                    container.innerHTML = articles.map(article => createArticleCard(article)).join('');
+                }
+            } catch (error) {
+                container.innerHTML = '<div class="error">Error loading articles</div>';
+                console.error('Error:', error);
+            }
+        }
+
+        // Create article card
+        function createArticleCard(article) {
+            const date = article.published_date
+                ? timeAgo(new Date(article.published_date))
+                : '';
+
+            const locationBadge = article.location_name
+                ? `<span class="location-badge">📍 ${article.location_name}</span>`
+                : '';
+
+            const categoryClass = article.category.toLowerCase().replace(/[^a-z]/g, '-');
+            const isBookmarked = bookmarks.includes(article.link);
+
+            return `
+                <article class="article-card">
+                    <div class="article-meta">
+                        <span class="category-badge ${categoryClass}">${article.category}</span>
+                        <span class="source">${article.source}</span>
+                        ${locationBadge}
+                        <span class="date">${date}</span>
+                        <button class="bookmark-btn ${isBookmarked ? 'bookmarked' : ''}"
+                                onclick="toggleBookmark('${article.link.replace(/'/g, "\\'")}', this)">
+                            ${isBookmarked ? '★' : '☆'}
+                        </button>
+                    </div>
+                    <h3 class="article-title">
+                        <a href="${article.link}" target="_blank" rel="noopener">${article.title}</a>
+                    </h3>
+                    <p class="article-description">${article.description || ''}</p>
+                </article>
+            `;
+        }
+
+        // Create grouped card
+        function createGroupedCard(group) {
+            const article = group.main;
+            const related = group.related;
+
+            const date = article.published_date
+                ? timeAgo(new Date(article.published_date))
+                : '';
+
+            const locationBadge = article.location_name
+                ? `<span class="location-badge">📍 ${article.location_name}</span>`
+                : '';
+
+            const categoryClass = article.category.toLowerCase().replace(/[^a-z]/g, '-');
+            const isBookmarked = bookmarks.includes(article.link);
+            const groupId = btoa(article.link).replace(/[^a-z0-9]/gi, '');
+
+            let relatedHtml = '';
+            if (related.length > 0) {
+                const relatedItems = related.map(r =>
+                    `<div class="related-article">
+                        <a href="${r.link}" target="_blank">${r.title}</a>
+                        <span class="related-source">${r.source}</span>
+                    </div>`
+                ).join('');
+
+                relatedHtml = `
+                    <button class="related-toggle" onclick="toggleRelated('${groupId}')">
+                        📰 ${related.length} related article${related.length > 1 ? 's' : ''} from other sources
+                    </button>
+                    <div class="related-articles" id="related-${groupId}">
+                        ${relatedItems}
+                    </div>
+                `;
+            }
+
+            return `
+                <article class="article-card">
+                    <div class="article-meta">
+                        <span class="category-badge ${categoryClass}">${article.category}</span>
+                        <span class="source">${article.source}</span>
+                        ${locationBadge}
+                        <span class="date">${date}</span>
+                        <button class="bookmark-btn ${isBookmarked ? 'bookmarked' : ''}"
+                                onclick="toggleBookmark('${article.link.replace(/'/g, "\\'")}', this)">
+                            ${isBookmarked ? '★' : '☆'}
+                        </button>
+                    </div>
+                    <h3 class="article-title">
+                        <a href="${article.link}" target="_blank" rel="noopener">${article.title}</a>
+                    </h3>
+                    <p class="article-description">${article.description || ''}</p>
+                    ${relatedHtml}
+                </article>
+            `;
+        }
+
+        // Toggle related articles
+        function toggleRelated(groupId) {
+            const el = document.getElementById(`related-${groupId}`);
+            el.classList.toggle('show');
+        }
+
+        // Time ago helper
+        function timeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            if (seconds < 60) return 'just now';
+            if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+            if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+            if (seconds < 604800) return Math.floor(seconds / 86400) + 'd ago';
+            return date.toLocaleDateString();
+        }
+
+        // Bookmark functions
+        function toggleBookmark(link, btn) {
+            const index = bookmarks.indexOf(link);
+            if (index > -1) {
+                bookmarks.splice(index, 1);
+                btn.classList.remove('bookmarked');
+                btn.textContent = '☆';
+            } else {
+                bookmarks.push(link);
+                btn.classList.add('bookmarked');
+                btn.textContent = '★';
+            }
+            localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
+            updateBookmarkCount();
+        }
+
+        function updateBookmarkCount() {
+            document.getElementById('bookmark-count').textContent = bookmarks.length;
+        }
+
+        function toggleBookmarksView() {
+            showBookmarksOnly = !showBookmarksOnly;
+            document.getElementById('bookmarks-toggle').classList.toggle('active', showBookmarksOnly);
+            loadArticles();
+        }
+
+        // Category filter
+        function setCategory(btn, category) {
+            document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            currentCategory = category;
+            loadArticles();
+        }
+
+        // Debounced search
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(loadArticles, 300);
+        }
+
+        // Quick search
+        function quickSearch(term) {
+            document.getElementById('search').value = term;
+            loadArticles();
+        }
+
+        // Refresh feeds
+        async function refreshFeeds() {
+            const btn = document.querySelector('.refresh-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="refresh-icon spinning">↻</span> Refreshing...';
+
+            try {
+                await fetch('/api/refresh', { method: 'POST' });
+                setTimeout(() => {
+                    loadArticles();
+                    loadStats();
+                    loadBreakingNews();
+                    btn.disabled = false;
+                    btn.innerHTML = '<span class="refresh-icon">↻</span> Refresh';
+                }, 10000);
+            } catch (error) {
+                console.error('Error refreshing:', error);
+                btn.disabled = false;
+                btn.innerHTML = '<span class="refresh-icon">↻</span> Refresh';
+            }
+        }
+    </script>
+</body>
+</html>

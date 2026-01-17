@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Globe View - Situation Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/globe.gl"></script>
+    <style>
+        .globe-page {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: #0a0a0f;
+        }
+
+        .globe-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: rgba(15, 15, 25, 0.95);
+            border-bottom: 1px solid rgba(255, 100, 100, 0.2);
+            z-index: 100;
+        }
+
+        .globe-header .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .globe-header .logo-icon {
+            color: #ff4444;
+            font-size: 1.5rem;
+            animation: pulse-glow 2s infinite;
+        }
+
+        .globe-header .logo-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #fff;
+            letter-spacing: 2px;
+        }
+
+        .globe-header .nav-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .globe-header .nav-link {
+            color: #888;
+            text-decoration: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .globe-header .nav-link:hover,
+        .globe-header .nav-link.active {
+            color: #fff;
+            background: rgba(255, 68, 68, 0.2);
+        }
+
+        .globe-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #globe {
+            width: 100%;
+            height: 100%;
+        }
+
+        .globe-info-panel {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: rgba(15, 15, 25, 0.9);
+            border: 1px solid rgba(255, 100, 100, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            max-width: 350px;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+
+        .panel-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: #ff4444;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 0.75rem;
+        }
+
+        .location-name {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+
+        .article-count {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 1rem;
+        }
+
+        .article-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .article-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.85rem;
+            color: #ccc;
+            line-height: 1.4;
+        }
+
+        .article-list li:last-child {
+            border-bottom: none;
+        }
+
+        .category-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .category-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            padding: 0.25rem 0.5rem;
+            background: rgba(255, 68, 68, 0.2);
+            color: #ff6666;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+
+        .globe-legend {
+            position: absolute;
+            bottom: 1rem;
+            left: 1rem;
+            background: rgba(15, 15, 25, 0.9);
+            border: 1px solid rgba(255, 100, 100, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+
+        .legend-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+
+        .legend-items {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: #aaa;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.high { background: #ff4444; }
+        .legend-dot.medium { background: #ffaa00; }
+        .legend-dot.low { background: #44ff88; }
+
+        .globe-controls {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+
+        .globe-btn {
+            background: rgba(15, 15, 25, 0.9);
+            border: 1px solid rgba(255, 100, 100, 0.3);
+            color: #fff;
+            padding: 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.25rem;
+            transition: all 0.2s;
+            backdrop-filter: blur(10px);
+        }
+
+        .globe-btn:hover {
+            background: rgba(255, 68, 68, 0.3);
+            border-color: #ff4444;
+        }
+
+        .default-panel {
+            color: #666;
+            font-size: 0.85rem;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="globe-page">
+        <!-- Header -->
+        <header class="globe-header">
+            <div class="logo">
+                <span class="logo-icon">◉</span>
+                <span class="logo-text">SITUATION MONITOR</span>
+            </div>
+            <nav class="nav-links">
+                <a href="/" class="nav-link">Dashboard</a>
+                <a href="/globe" class="nav-link active">Globe</a>
+            </nav>
+        </header>
+
+        <!-- Globe Container -->
+        <div class="globe-container">
+            <div id="globe"></div>
+
+            <!-- Info Panel -->
+            <div class="globe-info-panel" id="info-panel">
+                <div class="panel-title">Location Intel</div>
+                <div id="panel-content">
+                    <p class="default-panel">Click a marker to view articles from that location</p>
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="globe-legend">
+                <div class="legend-title">Activity Level</div>
+                <div class="legend-items">
+                    <div class="legend-item">
+                        <span class="legend-dot high"></span>
+                        <span>High (20+ articles)</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-dot medium"></span>
+                        <span>Medium (5-19 articles)</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-dot low"></span>
+                        <span>Low (1-4 articles)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="globe-controls">
+                <button class="globe-btn" onclick="toggleAutoRotate()" title="Toggle rotation">🔄</button>
+                <button class="globe-btn" onclick="resetView()" title="Reset view">🏠</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let globe;
+        let globeData = [];
+        let autoRotate = true;
+
+        // Initialize globe
+        async function initGlobe() {
+            // Fetch data
+            const response = await fetch('/api/globe-data');
+            globeData = await response.json();
+
+            // Create globe
+            globe = Globe()
+                .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-dark.jpg')
+                .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
+                .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+                .pointsData(globeData)
+                .pointLat(d => d.lat)
+                .pointLng(d => d.lng)
+                .pointColor(d => getPointColor(d.count))
+                .pointAltitude(d => Math.min(d.count / 50, 0.5))
+                .pointRadius(d => Math.max(0.3, Math.min(d.count / 10, 1.5)))
+                .pointLabel(d => `<b>${d.name}</b><br>${d.count} articles`)
+                .onPointClick(handlePointClick)
+                .atmosphereColor('#ff4444')
+                .atmosphereAltitude(0.15)
+                (document.getElementById('globe'));
+
+            // Set initial view
+            globe.pointOfView({ lat: 30, lng: 0, altitude: 2.5 });
+
+            // Auto-rotate
+            globe.controls().autoRotate = true;
+            globe.controls().autoRotateSpeed = 0.5;
+
+            // Add arcs for connections between high-activity locations
+            addArcs();
+        }
+
+        // Get color based on article count
+        function getPointColor(count) {
+            if (count >= 20) return '#ff4444';  // Red - high activity
+            if (count >= 5) return '#ffaa00';   // Orange - medium
+            return '#44ff88';                    // Green - low
+        }
+
+        // Handle point click
+        function handlePointClick(point) {
+            const panel = document.getElementById('panel-content');
+
+            const articlesHtml = point.titles
+                .map(title => `<li>${title}</li>`)
+                .join('');
+
+            const categoriesHtml = point.categories
+                .map(cat => `<span class="category-tag">${cat}</span>`)
+                .join('');
+
+            panel.innerHTML = `
+                <div class="location-name">${point.name}</div>
+                <div class="article-count">${point.count} articles tracked</div>
+                <ul class="article-list">${articlesHtml}</ul>
+                <div class="category-tags">${categoriesHtml}</div>
+            `;
+
+            // Focus on location
+            globe.pointOfView({
+                lat: point.lat,
+                lng: point.lng,
+                altitude: 1.5
+            }, 1000);
+        }
+
+        // Add arcs between major hotspots
+        function addArcs() {
+            const hotspots = globeData
+                .filter(d => d.count >= 10)
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 10);
+
+            const arcs = [];
+            for (let i = 0; i < hotspots.length - 1; i++) {
+                for (let j = i + 1; j < hotspots.length; j++) {
+                    arcs.push({
+                        startLat: hotspots[i].lat,
+                        startLng: hotspots[i].lng,
+                        endLat: hotspots[j].lat,
+                        endLng: hotspots[j].lng,
+                    });
+                }
+            }
+
+            globe
+                .arcsData(arcs)
+                .arcColor(() => ['rgba(255, 68, 68, 0.3)', 'rgba(255, 68, 68, 0.3)'])
+                .arcDashLength(0.5)
+                .arcDashGap(0.2)
+                .arcDashAnimateTime(2000)
+                .arcStroke(0.3);
+        }
+
+        // Toggle auto-rotate
+        function toggleAutoRotate() {
+            autoRotate = !autoRotate;
+            globe.controls().autoRotate = autoRotate;
+        }
+
+        // Reset view
+        function resetView() {
+            globe.pointOfView({ lat: 30, lng: 0, altitude: 2.5 }, 1000);
+            document.getElementById('panel-content').innerHTML =
+                '<p class="default-panel">Click a marker to view articles from that location</p>';
+        }
+
+        // Initialize on load
+        initGlobe();
+    </script>
+</body>
+</html>
