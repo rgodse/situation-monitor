@@ -15,6 +15,11 @@ import os
 # Get the directory where this script is located
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, 'news.db')
+MAX_ARTICLE_AGE_DAYS = int(os.environ.get('MAX_ARTICLE_AGE_DAYS', 7))
+
+def get_age_cutoff():
+    """Return ISO timestamp for the oldest article we'll serve."""
+    return (datetime.now() - timedelta(days=MAX_ARTICLE_AGE_DAYS)).isoformat()
 
 app = Flask(__name__)
 
@@ -342,8 +347,9 @@ def get_articles():
     conn = get_db()
     cursor = conn.cursor()
 
-    query = 'SELECT * FROM articles WHERE 1=1'
-    params = []
+    cutoff = get_age_cutoff()
+    query = 'SELECT * FROM articles WHERE fetched_date >= ?'
+    params = [cutoff]
 
     if category:
         query += ' AND category = ?'
@@ -371,8 +377,10 @@ def get_sources():
     conn = get_db()
     cursor = conn.cursor()
 
+    cutoff = get_age_cutoff()
     sources = cursor.execute(
-        'SELECT DISTINCT source FROM articles ORDER BY source'
+        'SELECT DISTINCT source FROM articles WHERE fetched_date >= ? ORDER BY source',
+        (cutoff,)
     ).fetchall()
 
     conn.close()
@@ -385,6 +393,8 @@ def get_globe_data():
     conn = get_db()
     cursor = conn.cursor()
 
+    cutoff = get_age_cutoff()
+
     # Get articles with location data, grouped by location
     articles = cursor.execute('''
         SELECT location_name, location_lat, location_lng,
@@ -392,10 +402,10 @@ def get_globe_data():
                GROUP_CONCAT(title, '|||') as titles,
                GROUP_CONCAT(category, '|||') as categories
         FROM articles
-        WHERE location_name IS NOT NULL
+        WHERE location_name IS NOT NULL AND fetched_date >= ?
         GROUP BY location_name
         ORDER BY count DESC
-    ''').fetchall()
+    ''', (cutoff,)).fetchall()
 
     conn.close()
 
@@ -428,15 +438,25 @@ def get_stats():
     conn = get_db()
     cursor = conn.cursor()
 
+    cutoff = get_age_cutoff()
     stats = {
-        'total_articles': cursor.execute('SELECT COUNT(*) FROM articles').fetchone()[0],
+        'total_articles': cursor.execute(
+            'SELECT COUNT(*) FROM articles WHERE fetched_date >= ?', (cutoff,)
+        ).fetchone()[0],
         'categories': {},
-        'sources_count': cursor.execute('SELECT COUNT(DISTINCT source) FROM articles').fetchone()[0],
-        'locations_count': cursor.execute('SELECT COUNT(DISTINCT location_name) FROM articles WHERE location_name IS NOT NULL').fetchone()[0],
+        'sources_count': cursor.execute(
+            'SELECT COUNT(DISTINCT source) FROM articles WHERE fetched_date >= ?', (cutoff,)
+        ).fetchone()[0],
+        'locations_count': cursor.execute(
+            'SELECT COUNT(DISTINCT location_name) FROM articles WHERE location_name IS NOT NULL AND fetched_date >= ?', (cutoff,)
+        ).fetchone()[0],
     }
 
     # Articles per category
-    for row in cursor.execute('SELECT category, COUNT(*) as count FROM articles GROUP BY category'):
+    for row in cursor.execute(
+        'SELECT category, COUNT(*) as count FROM articles WHERE fetched_date >= ? GROUP BY category',
+        (cutoff,)
+    ):
         stats['categories'][row['category']] = row['count']
 
     conn.close()
@@ -493,8 +513,9 @@ def get_articles_grouped():
     conn = get_db()
     cursor = conn.cursor()
 
-    query = 'SELECT * FROM articles WHERE 1=1'
-    params = []
+    cutoff = get_age_cutoff()
+    query = 'SELECT * FROM articles WHERE fetched_date >= ?'
+    params = [cutoff]
 
     if category:
         query += ' AND category = ?'
