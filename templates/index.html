@@ -63,7 +63,7 @@
         .breaking-ticker {
             display: inline-block;
             white-space: nowrap;
-            animation: ticker 30s linear infinite;
+            animation: ticker 60s linear infinite;
         }
         .breaking-ticker:hover { animation-play-state: paused; }
         @keyframes ticker {
@@ -237,6 +237,9 @@
                 <button class="refresh-btn" onclick="refreshFeeds()">
                     <span class="refresh-icon">↻</span> Refresh
                 </button>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">
+                    <span id="theme-icon">☀️</span>
+                </button>
             </div>
         </header>
 
@@ -341,8 +344,26 @@
         let showBookmarksOnly = false;
         let currentView = 'list';
 
+        // Theme toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            document.getElementById('theme-icon').textContent = newTheme === 'light' ? '🌙' : '☀️';
+        }
+
+        // Load saved theme
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.getElementById('theme-icon').textContent = savedTheme === 'light' ? '🌙' : '☀️';
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            loadTheme();
             loadArticles();
             loadSources();
             loadStats();
